@@ -1,6 +1,4 @@
-<p align="center">
-  <img src="src/assests/main.png" alt="context-mcp" />
-</p>
+·
 
 <p align="center">
   <a href="https://www.npmjs.com/package/context-mcp-server"><img src="https://img.shields.io/npm/v/context-mcp-server?style=flat-square" alt="npm version" /></a>
