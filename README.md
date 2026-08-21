@@ -241,7 +241,3 @@ Default port: `3100`. Default data dir: `~/.context-mcp`.
 Edit with `ctx settings`.
 
 ---
-
-## License
-
-MIT
