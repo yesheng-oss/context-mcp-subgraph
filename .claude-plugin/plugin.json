@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "context-mcp",
+  "version": "1.3.0",
+  "description": "Persistent AI memory + codebase knowledge graph MCP server for Claude Code.",
+  "author": {
+    "name": "Vibhas Dutta"
+  },
+  "homepage": "https://github.com/vibhasdutta/context-mcp#readme",
+  "repository": "https://github.com/vibhasdutta/context-mcp",
+  "license": "MIT",
+  "keywords": ["mcp", "memory", "codegraph", "knowledge-graph", "persistent-memory", "ai-tools"],
+  "skills": "./src/templates/claude/skills/",
+  "hooks": "./src/templates/claude/hooks/hooks.json"
+}

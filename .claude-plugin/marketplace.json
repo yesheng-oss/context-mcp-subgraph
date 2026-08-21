@@ -1,0 +1,14 @@
+{
+  "name": "context-mcp-marketplace",
+  "description": "Persistent AI memory + codebase knowledge graph MCP server, packaged as a Claude Code plugin.",
+  "owner": {
+    "name": "Vibhas Dutta"
+  },
+  "plugins": [
+    {
+      "name": "context-mcp",
+      "source": "./",
+      "description": "Persistent AI memory + codebase knowledge graph MCP server for Claude Code."
+    }
+  ]
+}

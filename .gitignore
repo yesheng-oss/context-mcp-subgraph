@@ -1,0 +1,46 @@
+# -- Node.js ------------------------------------------------------------------
+node_modules/
+npm-debug.log*
+*.log
+*.tgz
+
+# -- Python -------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+
+# -- context-mcp runtime data -------------------------------------------------
+# User memory lives in ~/.context-mcp -- never in the repo
+contextconfig.json
+*.pid
+
+# -- ContextGraph build outputs -----------------------------------------------
+codegraph-cache/
+
+# -- Local tool caches ---------------------------------------------------------
+scrape/
+
+# -- AI / IDE platform folders (user-specific, varies per machine) ------------
+.claude/
+.vscode/
+.idea/
+.codex/
+.agents/
+
+# -- Installed template files (written by ctx install, user-specific) ---------
+# Source templates live in src/templates/ -- these are installed copies
+CLAUDE.md
+GEMINI.md
+AGENTS.md
+
+docs/
+tests/
+scripts/

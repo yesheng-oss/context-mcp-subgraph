@@ -1,0 +1,69 @@
+{
+  "name": "context-mcp-server",
+  "version": "1.3.0",
+  "description": "Persistent AI memory + codebase knowledge graph MCP server. Works across Claude Code, VS Code Copilot, Google Antigravity, Codex CLI, Hermes Agent, Claude.ai, and ChatGPT.",
+  "type": "module",
+  "bin": {
+    "context-mcp": "./src/index.js",
+    "context-mcp-server": "./src/index.js",
+    "context-mcp-http": "./src/http.js",
+    "ctx": "./src/cli.js",
+    "context": "./src/cli.js"
+  },
+  "scripts": {
+    "mcp": "node src/index.js",
+    "mcp-server": "node src/http.js",
+    "cli": "node src/cli.js",
+    "check": "node --check src/index.js && node --check src/server.js && node --check src/db.js && node --check src/vector.js && node --check src/summarizer.js && node --check src/search.js && node --check src/config.js && node --check src/cli.js && node --check src/http.js && node --check src/tools/context.js && node --check src/tools/search.js && node --check src/tools/plan.js &&node --check src/tools/errorCheck.js && node --check src/tools/fileTools.js && node --check src/tools/gitTools.js && node --check src/tools/codegraph.js && node --check src/hooks/autoLink.js && node --check src/hooks/autoContext.js",
+    "check-mcp": "npm run check",
+    "test": "node --test",
+    "prepublishOnly": "npm run check"
+  },
+  "files": [
+    "src/",
+    "codegraph/",
+    ".claude-plugin/",
+    ".mcp.json",
+    "pyproject.toml",
+    "uv.lock",
+    "README.md"
+  ],
+  "keywords": [
+    "mcp",
+    "ai",
+    "memory",
+    "context",
+    "claude",
+    "claude-code",
+    "vscode",
+    "antigravity",
+    "codex",
+    "hermes",
+    "knowledge-graph",
+    "codegraph",
+    "modelcontextprotocol",
+    "persistent-memory",
+    "ai-tools"
+  ],
+  "author": "Vibhas Dutta",
+  "license": "MIT",
+  "homepage": "https://github.com/vibhasdutta/context-mcp#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vibhasdutta/context-mcp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/vibhasdutta/context-mcp/issues"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0"
+  },
+  "optionalDependencies": {
+    "keytar": "^7.9.0",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {}
+}
