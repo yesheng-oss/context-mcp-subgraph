@@ -77,7 +77,7 @@ export function createServer({ enableFileTools = false, enableGitTools = getConf
       } else if (GIT_TOOL_NAMES.has(name)) {
         result = await gitTool.handle(name, args, state);
       } else if (CODEGRAPH_TOOL_NAMES.has(name)) {
-        result = codegraphTool.handle(name, args, state);
+        result = await codegraphTool.handle(name, args, state);
       } else if (name === symbolDetailTool.definition.name) {
         result = await symbolDetailTool.handle(args, state);
       } else if (REGISTRY_TOOL_NAMES.has(name)) {

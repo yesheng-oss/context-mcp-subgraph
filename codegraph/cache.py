@@ -53,6 +53,7 @@ def load_cache(project_root: str) -> dict:
         # Use AST hash for change detection (source of truth)
         merged[key] = {
             "hash":         ast_entry.get("hash", sem_entry.get("hash", "")),
+            "stat":         ast_entry.get("stat", sem_entry.get("stat")),
             "nodes":        _merge_nodes(ast_entry.get("nodes", []), sem_entry.get("nodes", [])),
             "extracted_at": ast_entry.get("extracted_at", sem_entry.get("extracted_at", "")),
         }

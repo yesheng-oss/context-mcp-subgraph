@@ -43,4 +43,5 @@ AGENTS.md
 
 docs/
 tests/
-scripts/
+scripts/*
+!scripts/benchmark_context.py

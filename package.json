@@ -17,6 +17,7 @@
     "check": "node --check src/index.js && node --check src/server.js && node --check src/db.js && node --check src/vector.js && node --check src/summarizer.js && node --check src/search.js && node --check src/config.js && node --check src/cli.js && node --check src/http.js && node --check src/tools/context.js && node --check src/tools/search.js && node --check src/tools/plan.js &&node --check src/tools/errorCheck.js && node --check src/tools/fileTools.js && node --check src/tools/gitTools.js && node --check src/tools/codegraph.js && node --check src/hooks/autoLink.js && node --check src/hooks/autoContext.js",
     "check-mcp": "npm run check",
     "test": "node --test",
+    "benchmark": "python scripts/benchmark_context.py --budget 160",
     "prepublishOnly": "npm run check"
   },
   "files": [
@@ -45,15 +46,15 @@
     "persistent-memory",
     "ai-tools"
   ],
-  "author": "Vibhas Dutta",
+  "author": "yesheng-oss",
   "license": "MIT",
-  "homepage": "https://github.com/vibhasdutta/context-mcp#readme",
+  "homepage": "https://github.com/yesheng-oss/789#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/vibhasdutta/context-mcp.git"
+    "url": "git+https://github.com/yesheng-oss/789.git"
   },
   "bugs": {
-    "url": "https://github.com/vibhasdutta/context-mcp/issues"
+    "url": "https://github.com/yesheng-oss/789/issues"
   },
   "engines": {
     "node": ">=18.0.0"

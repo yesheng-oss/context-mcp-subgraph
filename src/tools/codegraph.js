@@ -3,7 +3,8 @@
  * Spawns `uv run python -m codegraph` with JSON on stdin, reads JSON from stdout.
  */
 
-import { spawnSync } from 'node:child_process';
+import { spawn } from 'node:child_process';
+import { statSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { saveGraph, saveContext, updateContext, getContext, flushToDisk } from '../db.js';
@@ -11,19 +12,85 @@ import { saveGraph, saveContext, updateContext, getContext, flushToDisk } from '
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT  = join(__dirname, '..', '..');
 
-function callPython(tool, args) {
-  const result = spawnSync('uv', ['run', 'python', '-m', 'codegraph'], {
-    input:    JSON.stringify({ tool, args }),
-    encoding: 'utf8',
-    cwd:      REPO_ROOT,
-    timeout:  120_000,
-  });
-  if (result.error) throw new Error(`codegraph subprocess failed: ${result.error.message}`);
-  if (result.status !== 0) throw new Error(result.stderr?.trim() || 'codegraph error');
-  const out = result.stdout.trim();
-  if (!out) throw new Error('codegraph returned no output');
-  return JSON.parse(out);
+const QUERY_TOOLS = new Set([
+  'codegraph_query', 'codegraph_context', 'codegraph_nodes', 'codegraph_arch',
+  'codegraph_affected', 'codegraph_filter',
+]);
+const queryCache = new Map();
+const MAX_QUERY_CACHE = 64;
+
+function cacheKey(tool, args) {
+  let revision = 'no-graph';
+  if (args?.path) {
+    try {
+      const stat = statSync(join(args.path, 'codegraph-cache', 'graph.json'));
+      revision = `${stat.size}:${stat.mtimeMs}`;
+    } catch { /* graph build will return the useful missing-cache error */ }
+  }
+  return `${revision}:${tool}:${JSON.stringify(args, Object.keys(args).sort())}`;
 }
+
+function callPython(tool, args, {
+  timeoutMs = 120_000,
+  command = 'uv',
+  commandArgs = ['run', 'python', '-m', 'codegraph'],
+  spawnImpl = spawn,
+} = {}) {
+  const started = performance.now();
+  const key = QUERY_TOOLS.has(tool) ? cacheKey(tool, args) : null;
+  if (key && queryCache.has(key)) {
+    const cached = queryCache.get(key);
+    return Promise.resolve({ ...cached, _meta: { cache_hit: true, time_ms: 0 } });
+  }
+
+  return new Promise((resolve, reject) => {
+    const child = spawnImpl(command, commandArgs, {
+      cwd: REPO_ROOT,
+      stdio: ['pipe', 'pipe', 'pipe'],
+    });
+    let stdout = '';
+    let stderr = '';
+    let settled = false;
+    const timer = setTimeout(() => {
+      child.kill();
+      finish(new Error(`codegraph request timed out after ${timeoutMs}ms`));
+    }, timeoutMs);
+
+    const finish = (error, value) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      if (error) reject(error);
+      else resolve(value);
+    };
+
+    child.stdout.on('data', chunk => { stdout += chunk; });
+    child.stderr.on('data', chunk => { stderr += chunk; });
+    child.on('error', error => finish(new Error(`codegraph subprocess failed: ${error.message}`)));
+    child.on('close', code => {
+      if (code !== 0) {
+        finish(new Error(stderr.trim() || stdout.trim() || `codegraph exited with code ${code}`));
+        return;
+      }
+      try {
+        const out = stdout.trim();
+        if (!out) throw new Error('codegraph returned no output');
+        const parsed = JSON.parse(out);
+        if (parsed.error) throw new Error(parsed.error);
+        if (key) {
+          queryCache.set(key, parsed);
+          if (queryCache.size > MAX_QUERY_CACHE) queryCache.delete(queryCache.keys().next().value);
+        }
+        finish(null, { ...parsed, _meta: { cache_hit: false, time_ms: Math.round(performance.now() - started) } });
+      } catch (error) {
+        finish(error);
+      }
+    });
+    child.stdin.end(JSON.stringify({ tool, args }));
+  });
+}
+
+export { callPython };
 
 export const definitions = [
   {
@@ -74,7 +141,7 @@ export const definitions = [
     description:
       'Build a bounded, token-budgeted context subgraph for an AI coding task. ' +
       'Finds query-matching seed nodes, expands callers/dependencies/imports up to max_hops, ' +
-      'ranks candidates, and returns compact nodes, relationship paths, budget usage, and dropped counts.',
+      'ranks candidates, and returns compact nodes, relationship paths, budget usage, candidate counts, and drop reasons.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -185,8 +252,8 @@ export const definitions = [
 
 export const TOOL_NAMES = new Set(definitions.map(d => d.name));
 
-export function handle(name, args, state) {
-  const result = callPython(name, args);
+export async function handle(name, args, state) {
+  const result = await callPython(name, args);
 
   // Persist graph metadata + save/update a context entry as a visible build record
   if (name === 'codegraph_build' && result.success) {

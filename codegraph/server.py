@@ -82,7 +82,8 @@ TOOLS = [
         description=(
             "Build a bounded, token-budgeted context subgraph for an AI coding task. "
             "Finds query-matching seed nodes, expands callers/dependencies/imports up to max_hops, "
-            "ranks candidates, and returns compact nodes, relationship paths, budget usage, and dropped counts."
+            "ranks candidates, and returns compact nodes, relationship paths, budget usage, "
+            "candidate counts, and per-item drop reasons."
         ),
         inputSchema={
             "type": "object",
@@ -316,6 +317,8 @@ async def _build(args: dict) -> dict:
         "cached":      len(cached),
         "changed":     len(changed),
         "deleted":     len(deleted),
+        "scanned":     scan_result.get("scanned", len(cached) + len(changed)),
+        "cache_hit_rate": round(scan_result.get("cache_hit_rate", 0.0), 4),
         "time_ms":     elapsed_ms,
         "summary":     f"Built graph: {len(graph_dict.get('nodes', []))} nodes from code files.",
         "outputs":     viz,

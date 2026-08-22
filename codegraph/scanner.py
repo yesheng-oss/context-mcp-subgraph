@@ -6,7 +6,7 @@ import os
 from pathlib import Path
 from typing import Iterator
 
-from .cache import file_hash, get_cached_nodes, set_cached_nodes, remove_deleted, load_cache, save_cache
+from .cache import get_cached_nodes_fast, remove_deleted, load_cache
 from .config import DEFAULT_IGNORE, MAX_FILE_BYTES, SKIP_FILENAMES, SKIP_EXTENSIONS, classify_file
 
 
@@ -51,6 +51,7 @@ def scan(project_root: str, extra_ignore: set | None = None) -> dict:
     cached = {}
     changed = {}
     existing_rel = set()
+    scanned_count = 0
 
     for abs_path in walk_files(root, extra_ignore):
         rel_path = os.path.relpath(abs_path, root).replace("\\", "/")
@@ -58,8 +59,8 @@ def scan(project_root: str, extra_ignore: set | None = None) -> dict:
         category = classify_file(abs_path)
         if category in ("unknown", "skip"):
             continue
-        h = file_hash(abs_path)
-        nodes = get_cached_nodes(cache, rel_path, h)
+        scanned_count += 1
+        nodes = get_cached_nodes_fast(cache, rel_path, abs_path)
         if nodes is not None:
             cached[rel_path] = nodes
         else:
@@ -73,4 +74,6 @@ def scan(project_root: str, extra_ignore: set | None = None) -> dict:
         "deleted": deleted,
         "cache":   cache,
         "root":    root,
+        "scanned": scanned_count,
+        "cache_hit_rate": (len(cached) / scanned_count if scanned_count else 1.0),
     }

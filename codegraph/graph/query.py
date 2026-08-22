@@ -10,6 +10,19 @@ from collections import deque
 from datetime import datetime, timezone
 from typing import Any
 
+from ..tokenizer import count_tokens
+
+
+RELATION_WEIGHTS = {
+    "calls": 1.00,
+    "called_by": 1.00,
+    "implements": 0.90,
+    "inherits": 0.85,
+    "imports": 0.75,
+    "imports_from": 0.75,
+    "relates-to": 0.35,
+}
+
 
 def answer(question: str, graph_dict: dict, token_budget: int = 2000) -> dict:
     """
@@ -132,26 +145,41 @@ def context_subgraph(
     seed_ids = [node["id"] for node in seeds]
     seed_scores = {node["id"]: score for score, node in scored[:top_k]}
 
-    adjacency: dict[str, list[tuple[str, dict]]] = {}
+    adjacency: dict[str, list[tuple[str, dict, str]]] = {}
     for edge in edges:
         source, target = edge.get("from"), edge.get("to")
         if source not in node_by_id or target not in node_by_id:
             continue
-        adjacency.setdefault(source, []).append((target, edge))
-        adjacency.setdefault(target, []).append((source, edge))
+        adjacency.setdefault(source, []).append((target, edge, "forward"))
+        adjacency.setdefault(target, []).append((source, edge, "reverse"))
 
     distances: dict[str, int] = {node_id: 0 for node_id in seed_ids}
     paths: dict[str, list[str]] = {node_id: [node_id] for node_id in seed_ids}
+    path_edges: dict[str, list[dict]] = {node_id: [] for node_id in seed_ids}
+    relation_scores: dict[str, float] = {node_id: 1.0 for node_id in seed_ids}
     queue = deque(seed_ids)
     while queue:
         current = queue.popleft()
         if distances[current] >= max_hops:
             continue
-        for neighbor, _edge in adjacency.get(current, []):
-            if neighbor in distances:
+        neighbors = sorted(
+            adjacency.get(current, []),
+            key=lambda item: -RELATION_WEIGHTS.get(item[1].get("relation", "relates-to"), 0.25),
+        )
+        for neighbor, edge, direction in neighbors:
+            relation = edge.get("relation", "relates-to")
+            candidate_score = relation_scores[current] * RELATION_WEIGHTS.get(relation, 0.25)
+            if neighbor in distances and candidate_score <= relation_scores[neighbor]:
                 continue
             distances[neighbor] = distances[current] + 1
             paths[neighbor] = [*paths[current], neighbor]
+            path_edges[neighbor] = [*path_edges[current], {
+                "from": edge.get("from"),
+                "to": edge.get("to"),
+                "relation": relation,
+                "direction": direction,
+            }]
+            relation_scores[neighbor] = candidate_score
             queue.append(neighbor)
 
     candidates = []
@@ -166,6 +194,7 @@ def context_subgraph(
             + structural_score * 0.35
             + rank_score * 0.15
             + recency_score * 0.05
+            + relation_scores.get(node_id, 0.0) * 0.25
         )
         if node_id in seed_scores:
             selection_score += seed_scores[node_id]
@@ -177,6 +206,7 @@ def context_subgraph(
     selected_ids: set[str] = set()
     tokens_used = 0
     skipped = 0
+    drop_reasons: list[dict] = []
     for selection_score, depth, node in candidates:
         record = _compact_context_node(
             node,
@@ -184,6 +214,7 @@ def context_subgraph(
             reason=_selection_reason(node, depth, terms),
             selection_score=selection_score,
             path=paths.get(node["id"], [node["id"]]),
+            path_edges=path_edges.get(node["id"], []),
         )
         cost = _estimated_tokens(record)
         if tokens_used + cost > token_budget:
@@ -196,6 +227,7 @@ def context_subgraph(
                     tokens_used += cost
                     continue
             skipped += 1
+            drop_reasons.append({"kind": "node", "id": node.get("id"), "reason": "token_budget"})
             continue
         selected.append(record)
         selected_ids.add(node["id"])
@@ -220,6 +252,7 @@ def context_subgraph(
         cost = _estimated_tokens(record)
         if tokens_used + cost > token_budget:
             skipped += 1
+            drop_reasons.append({"kind": "edge", "from": source, "to": target, "reason": "token_budget"})
             continue
         selected_edges.append(record)
         seen_edges.add(key)
@@ -236,6 +269,8 @@ def context_subgraph(
         "truncated": skipped > 0,
         "dropped_count": skipped,
         "has_more": skipped > 0,
+        "candidate_count": len(candidates),
+        "drop_reasons": drop_reasons,
     }
 
 
@@ -279,7 +314,7 @@ def _selection_reason(node: dict, depth: int, terms: list[str]) -> str:
     return "high_graph_rank" if depth == 0 else "graph_neighbor"
 
 
-def _compact_context_node(node: dict, *, depth: int, reason: str, selection_score: float, path: list[str]) -> dict:
+def _compact_context_node(node: dict, *, depth: int, reason: str, selection_score: float, path: list[str], path_edges: list[dict] | None = None) -> dict:
     record = {
         "id": node.get("id", ""),
         "name": node.get("name", ""),
@@ -287,8 +322,10 @@ def _compact_context_node(node: dict, *, depth: int, reason: str, selection_scor
         "file": node.get("file", ""),
         "depth": depth,
         "reason": reason,
+        "selection_reason": reason,
         "selection_score": round(selection_score, 4),
         "path": path,
+        "path_edges": path_edges or [],
     }
     for key in ("line", "rank", "exported", "side_effect"):
         if key in node:
@@ -308,7 +345,7 @@ def _minimal_context_node(node: dict, depth: int, reason: str) -> dict:
 
 
 def _estimated_tokens(value: dict) -> int:
-    return max(1, (len(json.dumps(value, ensure_ascii=False, separators=(",", ":"))) + 3) // 4)
+    return max(1, count_tokens(json.dumps(value, ensure_ascii=False, separators=(",", ":"), sort_keys=True)))
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────

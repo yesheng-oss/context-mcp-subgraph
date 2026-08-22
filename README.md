@@ -29,7 +29,34 @@ This gets worse as projects grow — reading 20 files to answer "what calls this
 - **Shared store** — `~/.context-mcp/projects/<name>/` per-project on your machine; all AI tools read and write it
 - **ContextGraph** — build a knowledge graph of your codebase once, answer structural questions in ~500 tokens instead of ~50,000
 
-Real measured reduction on this project: **162× fewer tokens**, **99.38% reduction** per conversation.
+The repository includes a reproducible offline benchmark for measuring context
+compression and retrieval quality; reported values are generated locally from
+the benchmark fixture.
+
+## Context Subgraph Pipeline
+
+```text
+Code files ──Tree-sitter AST──> entities + relations ──> ContextGraph cache
+                                                          │
+AI task ──lexical seeds──> relation-aware BFS ──> rank + recency ──> token budget
+                                                          │
+                                                          └──> compact MCP context
+```
+
+`codegraph_context` keeps callers, dependencies, imports, inheritance and
+implementation paths together while enforcing the requested token budget. It
+returns `tokens_used`, `candidate_count`, `dropped_count`, `drop_reasons`, and
+path metadata so an agent can explain why context was selected or omitted.
+
+Run the reproducible offline benchmark with:
+
+```bash
+python scripts/benchmark_context.py --budget 160
+```
+
+The benchmark reports Top-K recall, path accuracy, latency, budget compliance,
+and context compression using a fixed graph fixture. It does not call an
+external model or online API.
 
 ---
 
@@ -98,11 +125,11 @@ ctx online --port 3200   # different port
 This repo is also a self-hosted Claude Code plugin marketplace — an alternative to `ctx install --claude` that doesn't require cloning or npm-installing anything yourself:
 
 ```bash
-claude plugin marketplace add vibhasdutta/context-mcp
+claude plugin marketplace add yesheng-oss/789
 claude plugin install context-mcp@context-mcp-marketplace
 ```
 
-or from inside a session: `/plugin marketplace add vibhasdutta/context-mcp` then `/plugin install context-mcp@context-mcp-marketplace`. This installs the `context-mcp` skill, the Bash pre/post-tool-use hooks, and registers the MCP server (still launched via `npx context-mcp-server@latest`) — everything `ctx install --claude` writes into `~/.claude/`, bundled as one installable unit. `ctx install --initial` is still required once to install the ContextGraph Python environment.
+or from inside a session: `/plugin marketplace add yesheng-oss/789` then `/plugin install context-mcp@context-mcp-marketplace`. This installs the `context-mcp` skill, the Bash pre/post-tool-use hooks, and registers the MCP server (still launched via `npx context-mcp-server@latest`) — everything `ctx install --claude` writes into `~/.claude/`, bundled as one installable unit. `ctx install --initial` is still required once to install the ContextGraph Python environment.
 
 ---
 

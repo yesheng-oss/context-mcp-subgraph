@@ -46,6 +46,35 @@ class ContextSubgraphTests(unittest.TestCase):
         self.assertEqual([node["id"] for node in result["nodes"]], ["a", "b"])
         self.assertEqual(result["seed_nodes"], ["a", "b"])
 
+    def test_relation_aware_expansion_prefers_call_chain_over_import_noise(self):
+        graph = {
+            "nodes": [
+                {"id": "root", "name": "AuthService", "type": "class", "file": "auth.py", "rank": 0.5},
+                {"id": "caller", "name": "login", "type": "function", "file": "api.py", "rank": 0.4},
+                {"id": "dep", "name": "TokenStore", "type": "class", "file": "token.py", "rank": 0.4},
+                {"id": "noise", "name": "Config", "type": "module", "file": "config.py", "rank": 0.99},
+            ],
+            "edges": [
+                {"from": "caller", "to": "root", "relation": "calls"},
+                {"from": "root", "to": "dep", "relation": "imports"},
+                {"from": "root", "to": "noise", "relation": "relates-to"},
+            ],
+        }
+
+        result = context_subgraph("AuthService", graph, max_hops=1, top_k=1, token_budget=1000)
+
+        self.assertEqual(result["seed_nodes"], ["root"])
+        self.assertEqual([node["id"] for node in result["nodes"]], ["root", "caller", "dep", "noise"])
+        self.assertTrue(all(node.get("selection_reason") for node in result["nodes"]))
+        self.assertEqual(result["candidate_count"], 4)
+
+    def test_budget_reports_per_item_drop_reasons_and_never_exceeds_budget(self):
+        result = context_subgraph("AuthService", self.graph, max_hops=2, token_budget=18)
+
+        self.assertLessEqual(result["tokens_used"], result["token_budget"])
+        self.assertIn("drop_reasons", result)
+        self.assertTrue(result["drop_reasons"])
+
 
 if __name__ == "__main__":
     unittest.main()
