@@ -1,14 +1,3 @@
-<p align="center">
-  <img src="src/assests/main.png" alt="context-mcp" />
-</p>
-
-<p align="center">
-  <a href="https://www.npmjs.com/package/context-mcp-server"><img src="https://img.shields.io/npm/v/context-mcp-server?style=flat-square" alt="npm version" /></a>
-  <a href="https://www.npmjs.com/package/context-mcp-server"><img src="https://img.shields.io/npm/dm/context-mcp-server?style=flat-square" alt="npm downloads" /></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square" alt="License: MIT" /></a>
-  <a href="package.json"><img src="https://img.shields.io/node/v/context-mcp-server?style=flat-square" alt="Node.js" /></a>
-</p>
-
 Persistent memory and codebase knowledge graph for AI coding assistants — delivered as a single MCP server.
 
 One shared context store across Claude Code, VS Code Copilot, Google Antigravity (2.0 / IDE / CLI), Codex CLI, Hermes Agent, Claude.ai, and ChatGPT. Save context from one AI, pick it up in another.
@@ -279,7 +268,3 @@ Default port: `3100`. Default data dir: `~/.context-mcp`.
 Edit with `ctx settings`.
 
 ---
-
-## License
-
-MIT
